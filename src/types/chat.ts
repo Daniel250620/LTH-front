@@ -40,6 +40,7 @@ export interface Message {
   createdAt: string;
   rawPayload?: RawPayload;
   imageId?: string;
+  imageUrl?: string;
 }
 
 export interface Customer {
@@ -62,4 +63,5 @@ export interface ConversationState {
 export interface ChatHistoryResponse {
   messages: Message[];
   isBotActive: boolean;
+  hasMore?: boolean;
 }
