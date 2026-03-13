@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 
+import Image from "next/image";
+
 interface WhatsAppImageProps {
   mediaId: string;
   alt?: string;
@@ -25,15 +27,15 @@ export default function WhatsAppImage({
   }
 
   return (
-    <div className="relative max-w-xs">
+    <div className="relative w-[220px] h-[220px] lg:w-[280px] lg:h-[280px]">
       {loading && (
-        <div className="w-64 h-64 bg-zinc-200/50 animate-pulse rounded-lg flex items-center justify-center text-zinc-400 text-sm">
+        <div className="absolute inset-0 bg-zinc-200/50 animate-pulse rounded-lg flex items-center justify-center text-zinc-400 text-[10px] lg:text-sm z-10 text-center px-2">
           Cargando imagen...
         </div>
       )}
 
       {error ? (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-500 rounded-lg text-sm">
+        <div className="p-3 bg-red-50 border border-red-200 text-red-500 rounded-lg text-[10px] lg:text-sm">
           [Error: No se pudo cargar la imagen]
         </div>
       ) : (
@@ -45,8 +47,9 @@ export default function WhatsAppImage({
             setLoading(false);
             setError(true);
           }}
-          className={`max-w-xs rounded-lg shadow-sm object-cover transition-opacity duration-300 ${loading ? "opacity-0" : "opacity-100"}`}
-          style={{ display: loading ? "none" : "block" }}
+          className={`w-full h-full rounded-lg shadow-sm object-cover transition-opacity duration-300 ${
+            loading ? "opacity-0" : "opacity-100"
+          }`}
         />
       )}
     </div>

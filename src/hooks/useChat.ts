@@ -5,43 +5,64 @@ import { useSocket } from "@/context/SocketContext";
 import { Message, ChatHistoryResponse } from "@/types/chat";
 
 const processMessage = (msg: Message): Message => {
-  if (msg.content === "[Archivo: image]" && msg.rawPayload) {
+  // 1. Intentar obtener el ID de varias propiedades (incluyendo fileId que es el que usa el back)
+  const extractedId =
+    msg.imageId || (msg as any).fileId || (msg as any).mediaId;
+
+  // 2. Si encontramos un ID en la raíz, lo normalizamos a imageId
+  if (extractedId) {
+    return { ...msg, imageId: String(extractedId) };
+  }
+
+  // 3. Si no hay ID en la raíz, intentar extraerlo del rawPayload (mensajes entrantes de WhatsApp)
+  if (msg.rawPayload) {
     try {
       const payload =
         typeof msg.rawPayload === "string"
           ? JSON.parse(msg.rawPayload)
           : msg.rawPayload;
-      const imageId =
-        payload?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.image?.id;
-      if (imageId) {
-        return { ...msg, imageId };
+
+      const whatsappId =
+        payload?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.image?.id ||
+        payload?.image?.id;
+
+      if (whatsappId) {
+        return { ...msg, imageId: String(whatsappId) };
       }
     } catch (e) {
       console.error("Error parsing rawPayload for image id", e);
     }
   }
+
   return msg;
 };
 
 export function useChat(customerId?: number) {
-  const { socket, isConnected, contacts, setContacts } = useSocket();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { socket, isConnected, contacts } = useSocket();
+
+  // FIX 1: Actualización atómica de estado
+  const [chatState, setChatState] = useState({
+    messages: [] as Message[],
+    hasMore: true,
+    isLoadingMore: false,
+    firstItemIndex: 1000000,
+  });
+
   const [isUploading, setIsUploading] = useState(false);
   const [prevCustomerId, setPrevCustomerId] = useState(customerId);
-  const [firstItemIndex, setFirstItemIndex] = useState(1000000);
 
   const isLoadingMoreRef = useRef(false);
   const lastLoadTime = useRef(0);
 
   // Reiniciar el estado durante el renderizado si el customerId cambia
-  // Esto evita "cascading renders" comparado con hacerlo en un useEffect
   if (customerId !== prevCustomerId) {
     setPrevCustomerId(customerId);
-    setMessages([]);
-    setHasMore(true);
-    setFirstItemIndex(1000000);
+    setChatState({
+      messages: [],
+      hasMore: true,
+      isLoadingMore: false,
+      firstItemIndex: 1000000,
+    });
   }
 
   // Obtenemos el estado del bot desde el estado global de contactos
@@ -55,31 +76,38 @@ export function useChat(customerId?: number) {
         "findAllChat",
         { customerId, limit: 50 },
         (response: ChatHistoryResponse | Message[]) => {
-          // Manejar nuevo formato { messages: Message[], isBotActive: boolean, hasMore?: boolean }
           if (response && !Array.isArray(response) && "messages" in response) {
             const initialMessages = response.messages.map(processMessage);
-            setMessages(initialMessages);
-            setHasMore(response.hasMore ?? false);
-            setFirstItemIndex(1000000 - initialMessages.length);
+            setChatState({
+              messages: initialMessages,
+              hasMore: response.hasMore ?? false,
+              isLoadingMore: false,
+              firstItemIndex: 1000000 - initialMessages.length,
+            });
           } else if (Array.isArray(response)) {
-            // Fallback para el formato anterior (solo array de mensajes)
             const initialMessages = response.map(processMessage);
-            setMessages(initialMessages);
-            setHasMore(false);
-            setFirstItemIndex(1000000 - initialMessages.length);
+            setChatState({
+              messages: initialMessages,
+              hasMore: false,
+              isLoadingMore: false,
+              firstItemIndex: 1000000 - initialMessages.length,
+            });
           }
         },
       );
     }
-  }, [socket, customerId, setContacts]);
+  }, [socket, customerId]);
 
-  // Manejar mensajes entrantes (solo para el chat activo)
+  // Manejar mensajes entrantes
   useEffect(() => {
     if (!socket) return;
 
     const onNewMessage = (msg: Message) => {
       if (msg.customerId === customerId) {
-        setMessages((prev) => [...prev, processMessage(msg)]);
+        setChatState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, processMessage(msg)],
+        }));
       }
     };
 
@@ -95,9 +123,9 @@ export function useChat(customerId?: number) {
     if (
       !socket ||
       !customerId ||
-      !hasMore ||
+      !chatState.hasMore ||
       isLoadingMoreRef.current ||
-      messages.length === 0 ||
+      chatState.messages.length === 0 ||
       now - lastLoadTime.current < 500
     ) {
       return;
@@ -105,12 +133,12 @@ export function useChat(customerId?: number) {
 
     isLoadingMoreRef.current = true;
     lastLoadTime.current = now;
-    setIsLoadingMore(true);
 
-    const cursor = messages[0].createdAt;
+    setChatState((prev) => ({ ...prev, isLoadingMore: true }));
+
+    const cursor = chatState.messages[0].createdAt;
 
     try {
-      // Promisificamos el socket.emit para usar la estructura async/await
       const response = await new Promise<ChatHistoryResponse | Message[]>(
         (resolve) => {
           socket.emit(
@@ -124,25 +152,45 @@ export function useChat(customerId?: number) {
       if (response && !Array.isArray(response) && "messages" in response) {
         const olderMessages = response.messages.map(processMessage);
         if (olderMessages.length > 0) {
-          setMessages((prev) => [...olderMessages, ...prev]);
-          setFirstItemIndex((prev) => prev - olderMessages.length);
+          setChatState((prev) => ({
+            ...prev,
+            messages: [...olderMessages, ...prev.messages],
+            hasMore: response.hasMore ?? false,
+            isLoadingMore: false,
+            firstItemIndex: prev.firstItemIndex - olderMessages.length,
+          }));
+        } else {
+          setChatState((prev) => ({
+            ...prev,
+            hasMore: response.hasMore ?? false,
+            isLoadingMore: false,
+          }));
         }
-        setHasMore(response.hasMore ?? false);
       } else if (Array.isArray(response)) {
         const olderMessages = response.map(processMessage);
         if (olderMessages.length > 0) {
-          setMessages((prev) => [...olderMessages, ...prev]);
-          setFirstItemIndex((prev) => prev - olderMessages.length);
+          setChatState((prev) => ({
+            ...prev,
+            messages: [...olderMessages, ...prev.messages],
+            hasMore: false,
+            isLoadingMore: false,
+            firstItemIndex: prev.firstItemIndex - olderMessages.length,
+          }));
+        } else {
+          setChatState((prev) => ({
+            ...prev,
+            hasMore: false,
+            isLoadingMore: false,
+          }));
         }
-        setHasMore(false);
       }
     } catch (error) {
       console.error("Error loading more messages:", error);
+      setChatState((prev) => ({ ...prev, isLoadingMore: false }));
     } finally {
       isLoadingMoreRef.current = false;
-      setIsLoadingMore(false);
     }
-  }, [socket, customerId, hasMore, messages]);
+  }, [socket, customerId, chatState.hasMore, chatState.messages]);
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -169,9 +217,7 @@ export function useChat(customerId?: number) {
       try {
         const backendUrl =
           process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8081";
-        console.log("Subiendo imagen a:", `${backendUrl}/files/upload`);
-
-        const response = await fetch(`${backendUrl}/files/upload`, {
+        const response = await fetch(`${backendUrl}/whatsapp/media`, {
           method: "POST",
           body: formData,
         });
@@ -184,15 +230,13 @@ export function useChat(customerId?: number) {
         }
 
         const data = await response.json();
-        console.log("Respuesta del servidor tras subir imagen:", data);
 
-        // Paso 3: Mandar evento de socket con el ID recibido para que el back confirme y devuelva la URL
         if (socket) {
           socket.emit("createChat", {
             customerId,
             direction: "out",
             content: "",
-            mediaId: data.id || data.mediaId, // Usamos data.id o data.mediaId según lo que devuelva tu back
+            mediaId: data.id || data.mediaId,
           });
         }
       } catch (error) {
@@ -201,7 +245,7 @@ export function useChat(customerId?: number) {
         setIsUploading(false);
       }
     },
-    [customerId],
+    [customerId, socket],
   );
 
   const toggleBot = useCallback(
@@ -214,12 +258,12 @@ export function useChat(customerId?: number) {
   );
 
   return {
-    messages,
+    messages: chatState.messages,
     isBotActive,
-    hasMore,
-    isLoadingMore,
+    hasMore: chatState.hasMore,
+    isLoadingMore: chatState.isLoadingMore,
     isUploading,
-    firstItemIndex,
+    firstItemIndex: chatState.firstItemIndex,
     loadMoreMessages,
     sendMessage,
     sendImage,
