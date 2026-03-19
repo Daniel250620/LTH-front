@@ -35,7 +35,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         <div className="p-6 flex justify-between items-center bg-white">
           <Image
-            src="/LTH logo.jpg"
+            src="/lth-logo.jpg"
             alt="LTH Logo"
             width={120}
             height={50}

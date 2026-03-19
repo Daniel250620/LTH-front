@@ -23,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="ml-4 flex-1 flex justify-center lg:justify-start pr-8 lg:pr-0">
             <Image
-              src="/LTH logo.jpg"
+              src="/lth-logo.jpg"
               alt="LTH Logo"
               width={80}
               height={32}

@@ -9,11 +9,15 @@ import { useSocket } from "@/context/SocketContext";
 interface Props {
   onSelectContact?: (contact: Customer) => void;
   selectedContactId?: number | string;
+  isCollapsed?: boolean;
+  onExpand?: () => void;
 }
 
 export default function ContactList({
   onSelectContact,
   selectedContactId,
+  isCollapsed,
+  onExpand,
 }: Props) {
   const { contacts, loading } = useSocket();
   const [isSearching, setIsSearching] = useState(false);
@@ -34,10 +38,23 @@ export default function ContactList({
     }
   };
 
+  const handleExpandAndSearch = () => {
+    onExpand?.();
+    setIsSearching(true);
+  };
+
   return (
     <div className="flex flex-col h-full bg-white border-r border-zinc-200">
-      <div className="p-4 lg:p-6 flex justify-between items-center min-h-[80px] lg:min-h-[100px]">
-        {isSearching ? (
+      <div className={`p-4 lg:p-6 flex ${isCollapsed ? "justify-center" : "justify-between"} items-center min-h-[80px] lg:min-h-[100px]`}>
+        {isCollapsed ? (
+          <button
+            onClick={handleExpandAndSearch}
+            className="w-9 h-9 lg:w-10 lg:h-10 bg-zinc-100 rounded-full flex items-center justify-center hover:bg-zinc-200 transition-colors text-zinc-600"
+            title="Buscar y expandir"
+          >
+            <Search size={18} className="lg:w-5 lg:h-5" />
+          </button>
+        ) : isSearching ? (
           <div className="flex items-center w-full gap-2 transition-all duration-300">
             <div className="relative flex-1">
               <Search
@@ -72,16 +89,17 @@ export default function ContactList({
           </>
         )}
       </div>
+      
       <div className="flex-1 overflow-y-auto">
         {loading && contacts.length === 0 ? (
           <div className="p-6 text-center text-zinc-500">
-            Cargando contactos...
+            {!isCollapsed && "Cargando contactos..."}
           </div>
         ) : filteredContacts.length === 0 ? (
           <div className="p-6 text-center text-zinc-500">
             {searchQuery
               ? `No se encontraron contactos para "${searchQuery}"`
-              : "No hay contactos"}
+              : !isCollapsed && "No hay contactos"}
           </div>
         ) : (
           filteredContacts.map((contact) => (
@@ -89,8 +107,9 @@ export default function ContactList({
               key={contact.id}
               onClick={() => onSelectContact?.(contact)}
               className={selectedContactId === contact.id ? "bg-zinc-100" : ""}
+              title={isCollapsed ? contact.client_name : ""}
             >
-              <ContactItem contact={contact} />
+              <ContactItem contact={contact} isCollapsed={isCollapsed} />
             </div>
           ))
         )}

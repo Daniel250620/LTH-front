@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import ContactList from "@/components/ContactList";
 import {
   Bot,
@@ -22,6 +22,18 @@ export default function Chat() {
   const [isListCollapsed, setIsListCollapsed] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Asegurar que en móvil la lista no esté colapsada
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024 && isListCollapsed) {
+        setIsListCollapsed(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isListCollapsed]);
 
   const {
     messages,
@@ -64,12 +76,18 @@ export default function Chat() {
       <div
         className={`h-full shrink-0 transition-all duration-300 overflow-hidden bg-white border-r border-zinc-200 ${
           selectedContact ? "hidden lg:block" : "block w-full"
-        } ${isListCollapsed ? "lg:w-0 lg:border-none" : "lg:w-[350px]"}`}
+        } ${isListCollapsed ? "lg:w-[80px]" : "lg:w-[350px]"}`}
       >
-        <div className="w-full lg:w-[350px] h-full">
+        <div
+          className={`h-full transition-all duration-300 ${
+            isListCollapsed ? "lg:w-[80px] w-full" : "lg:w-[350px] w-full"
+          }`}
+        >
           <ContactList
             onSelectContact={setSelectedContact}
             selectedContactId={selectedContact?.id}
+            isCollapsed={isListCollapsed}
+            onExpand={() => setIsListCollapsed(false)}
           />
         </div>
       </div>
@@ -192,7 +210,7 @@ export default function Chat() {
                       } max-w-[85%] lg:max-w-[70%] animate-in fade-in slide-in-from-bottom-2 duration-300`}
                     >
                       <div
-                        className={`p-3 lg:p-4 rounded-2xl shadow-sm break-words ${
+                        className={`p-3 lg:p-4 rounded-2xl shadow-sm wrap-break-words ${
                           msg.direction === "out"
                             ? "bg-[#19213d] text-white rounded-tr-none"
                             : "bg-white text-[#19213d] rounded-tl-none border border-zinc-100"

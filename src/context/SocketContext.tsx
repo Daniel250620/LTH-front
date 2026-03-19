@@ -56,14 +56,14 @@ const MOCK_CUSTOMERS: Customer[] = [
     client_name: "Soporte Técnico LTH",
     client_number: "5212200000000",
     isBotActive: true,
-    avatarColor: getColorFromName("Soporte Técnico LTH")
+    avatarColor: getColorFromName("Soporte Técnico LTH"),
   },
   {
     id: 2,
     client_name: "Juan Pérez",
     client_number: "5212200000001",
     isBotActive: false,
-    avatarColor: getColorFromName("Juan Pérez")
+    avatarColor: getColorFromName("Juan Pérez"),
   },
 ];
 
@@ -76,12 +76,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchContacts = useCallback(async () => {
     setLoading(true);
     const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/customers`;
-    console.log("Cargando contactos de:", url);
+
     try {
       const response = await fetch(url);
       const text = await response.text();
       try {
         const data = JSON.parse(text);
+        console.log(data);
         if (response.ok && Array.isArray(data)) {
           const dataWithColors = data.map((c: Customer) => ({
             ...c,
@@ -148,7 +149,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         const customerWithColor = {
           ...newCustomer,
           isBotActive: !!newCustomer.isBotActive,
-          avatarColor: newCustomer.avatarColor || getColorFromName(newCustomer.client_name || "")
+          avatarColor:
+            newCustomer.avatarColor ||
+            getColorFromName(newCustomer.client_name || ""),
         };
 
         return [customerWithColor, ...prev];
