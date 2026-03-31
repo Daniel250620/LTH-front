@@ -1,6 +1,7 @@
 import React from "react";
 import { Customer } from "@/types/chat";
 import { CheckCheck } from "lucide-react";
+import { renderFormattedText } from "@/utils/formatText";
 
 interface Props {
   contact: Customer;
@@ -66,7 +67,7 @@ export default function ContactItem({ contact, isCollapsed }: Props) {
           <div className="flex items-center gap-1.5 overflow-hidden">
             {isOut && <CheckCheck size={14} className="text-zinc-500 shrink-0 lg:w-4 lg:h-4" />}
             <p className="text-sm lg:text-[15px] text-zinc-500 truncate leading-tight flex-1">
-              {displayMessage}
+              {renderFormattedText(displayMessage as string, true)}
             </p>
           </div>
         </div>

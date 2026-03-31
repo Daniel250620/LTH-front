@@ -15,7 +15,9 @@ import {
 import { Customer } from "@/types/chat";
 import { useChat } from "@/hooks/useChat";
 import WhatsAppImage from "@/components/WhatsAppImage";
+import WhatsAppDocument from "@/components/WhatsAppDocument";
 import { Virtuoso } from "react-virtuoso";
+import { renderFormattedText } from "@/utils/formatText";
 
 export default function Chat() {
   const [selectedContact, setSelectedContact] = useState<Customer | null>(null);
@@ -38,7 +40,7 @@ export default function Chat() {
   const {
     messages,
     sendMessage,
-    sendImage,
+    sendMedia,
     isUploading,
     isConnected,
     isBotActive,
@@ -62,9 +64,9 @@ export default function Chat() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    await sendImage(file);
+    await sendMedia(file);
 
-    // Limpiamos el input para poder subir la misma imagen después si se desea
+    // Limpiamos el input para poder subir el mismo archivo después si se desea
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -216,10 +218,24 @@ export default function Chat() {
                             : "bg-white text-[#19213d] rounded-tl-none border border-zinc-100"
                         }`}
                       >
-                        {msg.imageId ? (
+                        {msg.fileId ? (
+                          // Documento de S3 (PDF, cotización del bot)
+                          <div className="flex flex-col gap-2">
+                            <WhatsAppDocument
+                              fileId={msg.fileId}
+                              direction={msg.direction}
+                            />
+                            {msg.content && (
+                              <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                                {renderFormattedText(msg.content)}
+                              </div>
+                            )}
+                          </div>
+                        ) : msg.imageId ? (
+                          // Imagen de WhatsApp (media ID)
                           <WhatsAppImage mediaId={msg.imageId} />
                         ) : (
-                          msg.content
+                          renderFormattedText(msg.content)
                         )}
                       </div>
                       <span className="text-[10px] lg:text-[11px] text-zinc-400 mt-1 mx-1">
@@ -255,7 +271,7 @@ export default function Chat() {
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}
-                    accept="image/*"
+                    accept="image/*, application/pdf"
                     className="hidden"
                   />
                   <button
@@ -284,7 +300,7 @@ export default function Chat() {
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={
                         isUploading
-                          ? "Enviando imagen..."
+                          ? "Enviando archivo..."
                           : "Escribe un mensaje..."
                       }
                       disabled={isUploading}

@@ -39,6 +39,9 @@ export interface Message {
   content: string;
   createdAt: string;
   rawPayload?: RawPayload;
+  /** UUID de S3 — documetos enviados por el bot (PDFs, cotizaciones) */
+  fileId?: string;
+  /** WhatsApp media ID — imágenes enviadas por admin o recibidas de WhatsApp */
   imageId?: string;
   imageUrl?: string;
 }
