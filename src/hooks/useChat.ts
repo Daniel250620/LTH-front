@@ -5,20 +5,16 @@ import { useSocket } from "@/context/SocketContext";
 import { Message, ChatHistoryResponse } from "@/types/chat";
 
 const processMessage = (msg: Message): Message => {
- // 1. Si el mensaje trae fileId (UUID de S3, documento del bot), lo mantenemos como fileId
- //    y NO lo mezclamos con imageId que es exclusivo para WhatsApp media IDs (imágenes)
  const s3FileId = (msg as any).fileId;
  if (s3FileId && !msg.fileId) {
   return { ...msg, fileId: String(s3FileId) };
  }
 
- // 2. Normalizar WhatsApp media IDs de imágenes → imageId
  const whatsappImageId = msg.imageId || (msg as any).mediaId;
  if (whatsappImageId) {
   return { ...msg, imageId: String(whatsappImageId) };
  }
 
- // 3. Intentar extraer image ID del rawPayload (mensajes entrantes de WhatsApp)
  if (msg.rawPayload) {
   try {
    const payload =
@@ -40,7 +36,6 @@ const processMessage = (msg: Message): Message => {
 
  return msg;
 };
-
 
 export function useChat(customerId?: number) {
  const { socket, isConnected, contacts } = useSocket();
@@ -246,9 +241,9 @@ export function useChat(customerId?: number) {
       customerId,
       direction: "out",
       content: "",
-      ...(isDocument 
-        ? { fileId: data.id || data.mediaId } 
-        : { mediaId: data.id || data.mediaId }),
+      ...(isDocument
+       ? { fileId: data.id || data.mediaId }
+       : { mediaId: data.id || data.mediaId }),
      });
     }
    } catch (error) {

@@ -55,6 +55,7 @@ export interface Customer {
   avatarColor?: string;
   time?: string;
   lastMessage?: Message;
+  unreadCount?: number;
 }
 
 export interface ConversationState {

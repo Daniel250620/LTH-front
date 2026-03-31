@@ -6,6 +6,7 @@ import React, {
  useEffect,
  useState,
  useCallback,
+ useRef,
 } from "react";
 import { io, Socket } from "socket.io-client";
 import { Customer, Message } from "@/types/chat";
@@ -15,6 +16,8 @@ interface SocketContextType {
  isConnected: boolean;
  contacts: Customer[];
  loading: boolean;
+ activeContactId: number | null;
+ setActiveContactId: (id: number | null) => void;
  refreshContacts: () => Promise<void>;
  setContacts: React.Dispatch<React.SetStateAction<Customer[]>>;
 }
@@ -24,6 +27,8 @@ const SocketContext = createContext<SocketContextType>({
  isConnected: false,
  contacts: [],
  loading: false,
+ activeContactId: null,
+ setActiveContactId: () => {},
  refreshContacts: async () => {},
  setContacts: () => {},
 });
@@ -72,6 +77,18 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
  const [isConnected, setIsConnected] = useState(false);
  const [contacts, setContacts] = useState<Customer[]>([]);
  const [loading, setLoading] = useState(false);
+ const [activeContactId, setActiveContactIdState] = useState<number | null>(null);
+ const activeContactIdRef = useRef<number | null>(null);
+
+ const setActiveContactId = useCallback((id: number | null) => {
+  setActiveContactIdState(id);
+  activeContactIdRef.current = id;
+  if (id !== null) {
+   setContacts((prev) =>
+    prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)),
+   );
+  }
+ }, []);
 
  const fetchContacts = useCallback(async () => {
   setLoading(true);
@@ -157,16 +174,23 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   });
 
   socketInstance.on("newMessage", (msg: Message) => {
-    console.log("📩 Nuevo mensaje recibido (Global):", msg);
-    setContacts((prev) => {
+   console.log("📩 Nuevo mensaje recibido (Global):", msg);
+   setContacts((prev) => {
     const index = prev.findIndex((c) => c.id === msg.customerId);
     if (index === -1) return prev;
 
     const updatedContacts = [...prev];
     const contact = { ...updatedContacts[index] };
 
-    // Actualizar con el nuevo objeto lastMessage
+    // Actualizar datos del mensaje
     contact.lastMessage = msg;
+
+    // Incrementar contador si NO es el chat activo
+    if (msg.customerId !== activeContactIdRef.current) {
+     contact.unreadCount = (contact.unreadCount || 0) + 1;
+    } else {
+     contact.unreadCount = 0;
+    }
 
     // Mover el contacto al principio de la lista
     updatedContacts.splice(index, 1);
@@ -189,6 +213,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     isConnected,
     contacts,
     loading,
+    activeContactId,
+    setActiveContactId,
     refreshContacts: fetchContacts,
     setContacts,
    }}
