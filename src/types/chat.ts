@@ -31,6 +31,9 @@ export interface RawPayload {
       };
     }[];
   }[];
+  reply_to_text?: string;
+  reply_to_direction?: "in" | "out";
+  wamid?: string;
 }
 export interface Message {
   id: string;

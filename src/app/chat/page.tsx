@@ -22,45 +22,75 @@ import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 import { renderFormattedText } from "@/utils/formatText";
 import { Message } from "@/types/chat";
 
-const MessageItem = React.memo(({ msg }: { msg: Message }) => {
- return (
-  <div className="px-4 lg:px-8 py-2 flex flex-col w-full">
-   <div
-    className={`flex flex-col ${
-     msg.direction === "out" ? "items-end self-end" : "items-start"
-    } max-w-[85%] lg:max-w-[70%]`}
-   >
-    <div
-     className={`p-3 lg:p-4 rounded-2xl shadow-sm wrap-break-words ${
-      msg.direction === "out"
-       ? "bg-blue-950 text-white rounded-tr-none"
-       : "bg-white text-[#19213d] rounded-tl-none border border-zinc-100"
-     }`}
-    >
-     {msg.fileId ? (
-      <div className="flex flex-col gap-2">
-       <WhatsAppDocument fileId={msg.fileId} direction={msg.direction} />
-       {msg.content && (
-        <div className="text-sm leading-relaxed whitespace-pre-wrap">
-         {renderFormattedText(msg.content)}
+const MessageItem = React.memo(({ msg, clientName }: { msg: Message; clientName?: string }) => {
+  const replyTo = msg.rawPayload?.reply_to_text;
+  const replyDirection = msg.rawPayload?.reply_to_direction;
+  const isOut = msg.direction === "out";
+
+  return (
+    <div className="px-4 lg:px-8 py-2 flex flex-col w-full">
+      <div
+        className={`flex flex-col ${
+          isOut ? "items-end self-end" : "items-start"
+        } max-w-[85%] lg:max-w-[70%]`}
+      >
+        <div
+          className={`p-3 lg:p-4 rounded-2xl shadow-sm wrap-break-words ${
+            isOut
+              ? "bg-blue-950 text-white rounded-tr-none"
+              : "bg-white text-[#19213d] rounded-tl-none border border-zinc-100"
+          }`}
+        >
+          {/* Reply status block */}
+          {replyTo && (
+            <div
+              className={`mb-2 p-2 rounded-lg border-l-4 flex flex-col gap-0.5 text-xs select-none max-w-full overflow-hidden ${
+                isOut
+                  ? "bg-white/10 border-blue-400"
+                  : "bg-zinc-50 border-blue-500"
+              }`}
+            >
+              <span
+                className={`font-bold ${
+                  isOut ? "text-blue-300" : "text-blue-600"
+                }`}
+              >
+                {replyDirection === "out" ? "Tú" : clientName || "Cliente"}
+              </span>
+              <div
+                className={`line-clamp-2 ${
+                  isOut ? "text-blue-50/70" : "text-zinc-500"
+                }`}
+              >
+                {replyTo}
+              </div>
+            </div>
+          )}
+
+          {msg.fileId ? (
+            <div className="flex flex-col gap-2">
+              <WhatsAppDocument fileId={msg.fileId} direction={msg.direction} />
+              {msg.content && (
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {renderFormattedText(msg.content)}
+                </div>
+              )}
+            </div>
+          ) : msg.imageId ? (
+            <WhatsAppImage mediaId={msg.imageId} />
+          ) : (
+            renderFormattedText(msg.content)
+          )}
         </div>
-       )}
+        <span className="text-[10px] lg:text-[11px] text-zinc-400 mt-1 mx-1">
+          {new Date(msg.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
       </div>
-     ) : msg.imageId ? (
-      <WhatsAppImage mediaId={msg.imageId} />
-     ) : (
-      renderFormattedText(msg.content)
-     )}
     </div>
-    <span className="text-[10px] lg:text-[11px] text-zinc-400 mt-1 mx-1">
-     {new Date(msg.createdAt).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-     })}
-    </span>
-   </div>
-  </div>
- );
+  );
 });
 
 MessageItem.displayName = "MessageItem";
@@ -190,10 +220,12 @@ export default function Chat() {
   }
  };
 
- const itemContent = useCallback(
-  (_index: number, msg: Message) => <MessageItem msg={msg} />,
-  [],
- ); // Sin dependencias porque MessageItem es estable
+  const itemContent = useCallback(
+  (_index: number, msg: Message) => (
+   <MessageItem msg={msg} clientName={selectedContact?.client_name} />
+  ),
+  [selectedContact?.client_name],
+ );
 
  // startReached ya debería venir de useCallback desde donde lo defines,
  // pero si no, también envuélvelo:
