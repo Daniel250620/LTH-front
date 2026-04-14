@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useProductStore } from "@/store/useProductStore";
+import { useWarehouseStore } from "@/store/useWarehouseStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCarBattery } from "@fortawesome/free-solid-svg-icons";
 
@@ -39,7 +40,7 @@ export default function ProductForm({
  title,
 }: ProductFormProps) {
  const router = useRouter();
- const { warehouses, fetchWarehouses } = useProductStore();
+ const { warehouses, fetchWarehouses } = useWarehouseStore();
 
  // Colores de la marca LTH basados en tus referencias
  const colors = {

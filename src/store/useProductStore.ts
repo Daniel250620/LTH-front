@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Product, ProductSummary, Warehouse } from "@/types/product";
+import { Product, ProductSummary } from "@/types/product";
 
 interface ProductResponse {
   hits: ProductSummary[];
@@ -10,7 +10,6 @@ interface ProductResponse {
 
 interface ProductStore {
   products: ProductSummary[];
-  warehouses: Warehouse[];
   loading: boolean;
   error: string | null;
 
@@ -42,16 +41,13 @@ interface ProductStore {
     product: Partial<Product>,
   ) => Promise<Product | null>;
   deleteProduct: (id: string) => Promise<boolean>;
-  fetchWarehouses: () => Promise<void>;
 }
 const API_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
 const API_BASE_URL = `${API_BACKEND}/products`;
-const WAREHOUSE_API_URL = `${API_BACKEND}/warehouses`;
 const API_URL = `${API_BASE_URL}/meili`;
 
 export const useProductStore = create<ProductStore>((set, get) => ({
   products: [],
-  warehouses: [],
   loading: false,
   error: null,
   search: "",
@@ -202,26 +198,7 @@ export const useProductStore = create<ProductStore>((set, get) => ({
     }
   },
 
-  fetchWarehouses: async () => {
-    const { warehouses } = get();
-    // Evitar llamada si ya tenemos los almacenes guardados en el store localmente
-    if (warehouses.length > 0) return;
 
-    set({ loading: true, error: null });
-    try {
-      const response = await fetch(WAREHOUSE_API_URL);
-      if (!response.ok) {
-        throw new Error("No se pudo cargar la lista de bodegas");
-      }
-      const warehouses: Warehouse[] = await response.json();
-      set({ warehouses, loading: false });
-    } catch (error) {
-      set({
-        error: (error as Error).message || "Error al obtener las bodegas",
-        loading: false,
-      });
-    }
-  },
 
   setSearch: (search: string) => {
     set({ search, offset: 0 });
