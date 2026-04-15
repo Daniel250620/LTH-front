@@ -26,7 +26,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   { href: "/products", label: "Productos", icon: Package },
   { href: "/inventory", label: "Inventario", icon: Archive },
   { href: "/quotes", label: "Cotizaciones", icon: File },
-  { href: "/transfers", label: "Transferencias", icon: ArrowLeftRight },
+  { href: "/transfers", label: "Traspasos", icon: ArrowLeftRight },
  ];
 
  return (
