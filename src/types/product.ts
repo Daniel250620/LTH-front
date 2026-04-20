@@ -85,6 +85,7 @@ export interface Product {
  name: string;
  description: string;
  price: string | number;
+ priceWithDiscount?: string | number;
  sku: string;
  category: Category;
  brand?: { id: number; name: string } | string;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
  Search,
  Download,
@@ -55,6 +56,7 @@ function SortHeader({
 }
 
 export default function QuotesPage() {
+ const router = useRouter();
  const { quotes, total, limit, offset, loading, fetchQuotes } = useQuoteStore();
  const { warehouses, fetchWarehouses } = useWarehouseStore();
 
@@ -262,7 +264,7 @@ export default function QuotesPage() {
            <button
             className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
             title="Ver / Descargar PDF"
-            onClick={() => window.open(`/api/whatsapp/image/${quote.fileId}`, '_blank')}
+            onClick={() => router.push(`/quotes/${quote.id}`)}
            >
             <Eye size={18} />
            </button>

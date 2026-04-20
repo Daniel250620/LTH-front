@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
- Product,
- BatteryModel,
- FiltersModel,
- OilsModel,
- Inventory,
- Warehouse,
-} from "@/types/product";
+import { Product } from "@/types/product";
 import {
  Save,
  X,
@@ -59,6 +52,10 @@ export default function ProductForm({
     ...rest,
     price:
      typeof rest.price === "string" ? parseFloat(rest.price) : rest.price || 0,
+    priceWithDiscount:
+     typeof rest.priceWithDiscount === "string"
+      ? parseFloat(rest.priceWithDiscount)
+      : rest.priceWithDiscount || 0,
     categoryId: category?.id || 1,
     brandId: brand && typeof brand === "object" ? brand.id : 1,
     sku: rest.sku ? String(rest.sku) : "",
@@ -72,6 +69,7 @@ export default function ProductForm({
    name: "",
    description: "",
    price: 0,
+   priceWithDiscount: 0,
    sku: "",
    brandId: 1,
    categoryId: 1,
@@ -152,7 +150,7 @@ export default function ProductForm({
   const { name, value } = e.target;
   setFormData((prev: any) => {
    const newValue =
-    name === "price"
+    name === "price" || name === "priceWithDiscount"
      ? parseFloat(value) || 0
      : name === "categoryId" || name === "brandId"
        ? parseInt(value) || 1
@@ -248,6 +246,7 @@ export default function ProductForm({
    name: formData.name,
    description: formData.description,
    price: Number(formData.price),
+   priceWithDiscount: Number(formData.priceWithDiscount),
    sku:
     formData.sku ||
     generateSKU(formData.name, formData.categoryId, formData.brandId),
@@ -366,7 +365,7 @@ export default function ProductForm({
       </div>
      </div>
 
-     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <div>
        <label className={labelStyles}>Categoría</label>
        <select
@@ -399,6 +398,24 @@ export default function ProductForm({
          type="number"
          name="price"
          value={formData.price}
+         onChange={handleChange}
+         min="0"
+         step="0.01"
+         className={`${inputStyles} pl-10`}
+        />
+        <DollarSign
+         size={18}
+         className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+        />
+       </div>
+      </div>
+      <div>
+       <label className={labelStyles}>Precio con Intercambio</label>
+       <div className="relative">
+        <input
+         type="number"
+         name="priceWithDiscount"
+         value={formData.priceWithDiscount}
          onChange={handleChange}
          min="0"
          step="0.01"
