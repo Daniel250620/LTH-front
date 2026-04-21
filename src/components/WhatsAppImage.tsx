@@ -4,23 +4,25 @@ import React, { useState } from "react";
 import { Download, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
 
 interface WhatsAppImageProps {
-  mediaId: string;
+  mediaId?: string;
+  url?: string;
   alt?: string;
 }
 
 export default function WhatsAppImage({
   mediaId,
+  url,
   alt = "WhatsApp Image",
 }: WhatsAppImageProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
 
-  const imageUrl = `/api/whatsapp/image/${mediaId}`;
+  const imageUrl = url || (mediaId ? `/api/whatsapp/image/${mediaId}` : "");
 
-  if (!mediaId) {
+  if (!imageUrl) {
     return (
       <div className="p-3 bg-red-50 border border-red-200 text-red-500 rounded-lg text-[10px] lg:text-sm max-w-[200px]">
-        [Error: mediaId no proporcionado]
+        [Error: No se proporcionó imagen]
       </div>
     );
   }
@@ -29,7 +31,7 @@ export default function WhatsAppImage({
     e.stopPropagation();
     const a = document.createElement("a");
     a.href = imageUrl;
-    a.download = `imagen_whatsapp_${mediaId}.jpg`;
+    a.download = mediaId ? `imagen_whatsapp_${mediaId}.jpg` : "imagen_lth.jpg";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

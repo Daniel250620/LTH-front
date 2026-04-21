@@ -1,6 +1,6 @@
 export interface RawPayload {
-  object: "whatsapp_business_account";
-  entry: {
+  object?: "whatsapp_business_account";
+  entry?: {
     id: string;
     changes: {
       field: "messages";
@@ -31,9 +31,19 @@ export interface RawPayload {
       };
     }[];
   }[];
+  type?: string;
+  buttons?: any[];
+  imageId?: string;
+  imageUrl?: string;
   reply_to_text?: string;
   reply_to_direction?: "in" | "out";
   wamid?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    address?: string;
+  };
 }
 export interface Message {
   id: string;

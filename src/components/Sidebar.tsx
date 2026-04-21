@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import {
  X,
  Home,
@@ -19,12 +20,11 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+ const pathname = usePathname();
+
  const menuItems = [
-  { href: "/", label: "Inicio", icon: Home },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/products", label: "Productos", icon: Package },
-  { href: "/inventory", label: "Inventario", icon: Archive },
   { href: "/quotes", label: "Cotizaciones", icon: File },
   { href: "/transfers", label: "Traspasos", icon: ArrowLeftRight },
  ];
@@ -61,20 +61,33 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     </div>
 
     <nav className="flex-1 px-4 mt-4 space-y-2">
-     {menuItems.map((item) => (
-      <Link
-       key={item.href}
-       href={item.href}
-       onClick={() => {
-        if (typeof window !== "undefined" && window.innerWidth < 1024)
-         onClose();
-       }}
-       className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-white rounded-lg hover:bg-blue-300/20 transition-colors"
-      >
-       <item.icon size={20} className="text-blue-300" />
-       {item.label}
-      </Link>
-     ))}
+     {menuItems.map((item) => {
+      const isActive =
+       pathname === item.href ||
+       (item.href !== "/" && pathname.startsWith(item.href));
+
+      return (
+       <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => {
+         if (typeof window !== "undefined" && window.innerWidth < 1024)
+          onClose();
+        }}
+        className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
+         isActive
+          ? "bg-blue-300/20 text-white shadow-sm ring-1 ring-blue-300/30"
+          : "text-blue-100/70 hover:bg-blue-300/10 hover:text-white"
+        }`}
+       >
+        <item.icon
+         size={20}
+         className={isActive ? "text-blue-300" : "text-blue-300/50"}
+        />
+        {item.label}
+       </Link>
+      );
+     })}
     </nav>
 
     <div className="p-6 border-t border-blue-900/50">

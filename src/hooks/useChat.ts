@@ -45,22 +45,53 @@ export function useChat(customerId?: number) {
   messages: [] as Message[],
   hasMore: true,
   isLoadingMore: false,
+  isLoading: false,
   firstItemIndex: 1000000,
  });
 
  const [isUploading, setIsUploading] = useState(false);
+ const [isTyping, setIsTyping] = useState(false);
  const [prevCustomerId, setPrevCustomerId] = useState(customerId);
 
  const isLoadingMoreRef = useRef(false);
  const lastLoadTime = useRef(0);
+ const pendingMessagesRef = useRef<Message[]>([]);
+ const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+ // Función para liberar mensajes en espera
+ const flushMessages = useCallback(() => {
+  if (typingTimeoutRef.current) {
+   clearTimeout(typingTimeoutRef.current);
+   typingTimeoutRef.current = null;
+  }
+
+  if (pendingMessagesRef.current.length > 0) {
+   const messagesToAppend = pendingMessagesRef.current.map(processMessage);
+   setChatState((prev) => ({
+    ...prev,
+    messages: [...prev.messages, ...messagesToAppend],
+   }));
+   pendingMessagesRef.current = [];
+  }
+  setIsTyping(false);
+ }, []);
 
  // Reiniciar el estado durante el renderizado si el customerId cambia
  if (customerId !== prevCustomerId) {
+  // Si cambiamos de chat, cancelamos cualquier simulación pendiente
+  if (typingTimeoutRef.current) {
+   clearTimeout(typingTimeoutRef.current);
+   typingTimeoutRef.current = null;
+  }
+  pendingMessagesRef.current = [];
+  setIsTyping(false);
+
   setPrevCustomerId(customerId);
   setChatState({
    messages: [],
    hasMore: true,
    isLoadingMore: false,
+   isLoading: !!customerId,
    firstItemIndex: 1000000,
   });
  }
@@ -83,6 +114,7 @@ export function useChat(customerId?: number) {
        messages: initialMessages,
        hasMore: response.hasMore ?? false,
        isLoadingMore: false,
+       isLoading: false,
        firstItemIndex: 1000000 - initialMessages.length,
       });
      } else if (Array.isArray(response)) {
@@ -91,6 +123,7 @@ export function useChat(customerId?: number) {
        messages: initialMessages,
        hasMore: false,
        isLoadingMore: false,
+       isLoading: false,
        firstItemIndex: 1000000 - initialMessages.length,
       });
      }
@@ -106,10 +139,31 @@ export function useChat(customerId?: number) {
   const onNewMessage = (msg: Message) => {
    console.log("📨 Mensaje recibido en el chat actual:", msg);
    if (msg.customerId === customerId) {
-    setChatState((prev) => ({
-     ...prev,
-     messages: [...prev.messages, processMessage(msg)],
-    }));
+    const isFromClient = msg.direction === "in";
+
+    if (isFromClient) {
+     // Si es del cliente, iniciamos o continuamos simulación
+     if (!typingTimeoutRef.current) {
+      setIsTyping(true);
+      pendingMessagesRef.current = [msg];
+
+      // Random delay between 1000ms and 3000ms
+      const delay = Math.floor(Math.random() * 2000) + 1000;
+      typingTimeoutRef.current = setTimeout(() => {
+       flushMessages();
+      }, delay);
+     } else {
+      // Ya estamos simulando, encolamos el mensaje
+      pendingMessagesRef.current.push(msg);
+     }
+    } else {
+     // Si es un mensaje de salida (nosotros o el bot), liberamos lo pendiente de inmediato
+     flushMessages();
+     setChatState((prev) => ({
+      ...prev,
+      messages: [...prev.messages, processMessage(msg)],
+     }));
+    }
    }
   };
 
@@ -117,8 +171,11 @@ export function useChat(customerId?: number) {
 
   return () => {
    socket.off("newMessage", onNewMessage);
+   if (typingTimeoutRef.current) {
+    clearTimeout(typingTimeoutRef.current);
+   }
   };
- }, [socket, customerId]);
+ }, [socket, customerId, flushMessages]);
 
  const loadMoreMessages = useCallback(async () => {
   const now = Date.now();
@@ -268,8 +325,10 @@ export function useChat(customerId?: number) {
   messages: chatState.messages,
   isBotActive,
   hasMore: chatState.hasMore,
+  isLoading: chatState.isLoading,
   isLoadingMore: chatState.isLoadingMore,
   isUploading,
+  isTyping,
   firstItemIndex: chatState.firstItemIndex,
   loadMoreMessages,
   sendMessage,

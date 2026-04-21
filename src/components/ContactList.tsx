@@ -13,6 +13,23 @@ interface Props {
  onExpand?: () => void;
 }
 
+const ContactSkeleton = ({ isCollapsed }: { isCollapsed?: boolean }) => (
+ <div
+  className={`flex items-center px-4 lg:px-6 py-4 lg:py-5 border-b border-zinc-100 last:border-0 animate-pulse ${isCollapsed ? "justify-center" : ""}`}
+ >
+  <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-zinc-200 shrink-0" />
+  {!isCollapsed && (
+   <div className="ml-3 lg:ml-4 flex-1 min-w-0">
+    <div className="flex justify-between items-center mb-2">
+     <div className="h-4 bg-zinc-200 rounded w-24 lg:w-32" />
+     <div className="h-3 bg-zinc-100 rounded w-12" />
+    </div>
+    <div className="h-3 bg-zinc-100 rounded w-3/4" />
+   </div>
+  )}
+ </div>
+);
+
 export default function ContactList({
  onSelectContact,
  selectedContactId,
@@ -94,9 +111,9 @@ export default function ContactList({
 
    <div className="flex-1 overflow-y-auto">
     {loading && contacts.length === 0 ? (
-     <div className="p-6 text-center text-zinc-500">
-      {!isCollapsed && "Cargando contactos..."}
-     </div>
+     Array.from({ length: 6 }).map((_, i) => (
+      <ContactSkeleton key={i} isCollapsed={isCollapsed} />
+     ))
     ) : filteredContacts.length === 0 ? (
      <div className="p-6 text-center text-zinc-500">
       {searchQuery

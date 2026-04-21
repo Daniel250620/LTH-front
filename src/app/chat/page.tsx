@@ -21,6 +21,17 @@ import WhatsAppDocument from "@/components/WhatsAppDocument";
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 import { renderFormattedText } from "@/utils/formatText";
 import { Message } from "@/types/chat";
+import TypingIndicator from "@/components/TypingIndicator";
+import dynamic from "next/dynamic";
+
+const WhatsAppLocation = dynamic(() => import("@/components/WhatsAppLocation"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-[240px] lg:w-[280px] h-[160px] bg-zinc-100 animate-pulse rounded-xl flex items-center justify-center">
+      <Loader2 className="animate-spin text-zinc-300" size={24} />
+    </div>
+  ),
+});
 
 const MessageItem = React.memo(
  ({ msg, clientName }: { msg: Message; clientName?: string }) => {
@@ -75,9 +86,15 @@ const MessageItem = React.memo(
           </div>
          )}
        </div>
-      ) : msg.imageId ? (
+      ) : msg.imageId ||
+        msg.imageUrl ||
+        msg.rawPayload?.imageUrl ||
+        msg.rawPayload?.imageId ? (
        <div className="flex flex-col gap-2">
-        <WhatsAppImage mediaId={msg.imageId} />
+        <WhatsAppImage
+         mediaId={msg.imageId || msg.rawPayload?.imageId}
+         url={msg.imageUrl || msg.rawPayload?.imageUrl}
+        />
         {msg.content &&
          msg.content !== "[Archivo: image]" &&
          msg.content !== "[Archivo: document]" && (
@@ -85,6 +102,21 @@ const MessageItem = React.memo(
            {renderFormattedText(msg.content)}
           </div>
          )}
+       </div>
+      ) : msg.rawPayload?.location ? (
+       <div className="flex flex-col gap-2">
+        <WhatsAppLocation
+         latitude={msg.rawPayload.location.latitude}
+         longitude={msg.rawPayload.location.longitude}
+         name={msg.rawPayload.location.name}
+         address={msg.rawPayload.location.address}
+         isOut={isOut}
+        />
+        {msg.content && msg.content !== "[Ubicación Compartida]" && (
+         <div className="text-sm leading-relaxed whitespace-pre-wrap pt-1 text-inherit max-w-[220px] lg:max-w-[280px]">
+          {renderFormattedText(msg.content)}
+         </div>
+        )}
        </div>
       ) : (
        renderFormattedText(msg.content)
@@ -100,6 +132,33 @@ const MessageItem = React.memo(
    </div>
   );
  },
+);
+
+const MessageSkeleton = () => (
+ <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 animate-pulse bg-[#f8fafc]">
+  {[
+   { side: "left", width: "w-[60%]" },
+   { side: "right", width: "w-[40%]" },
+   { side: "left", width: "w-[70%]" },
+   { side: "left", width: "w-[30%]" },
+   { side: "right", width: "w-[55%]" },
+   { side: "left", width: "w-[45%]" },
+  ].map((item, i) => (
+   <div
+    key={i}
+    className={`flex flex-col ${item.side === "right" ? "items-end" : "items-start"}`}
+   >
+    <div
+     className={`h-12 lg:h-16 ${item.width} rounded-2xl ${
+      item.side === "right"
+       ? "bg-blue-900/10 rounded-tr-none"
+       : "bg-zinc-200/50 rounded-tl-none"
+     }`}
+    />
+    <div className="h-3 w-12 bg-zinc-100 rounded mt-2 mx-1" />
+   </div>
+  ))}
+ </div>
 );
 
 MessageItem.displayName = "MessageItem";
@@ -129,6 +188,8 @@ export default function Chat() {
   isUploading,
   isConnected,
   isBotActive,
+  isTyping,
+  isLoading,
   toggleBot,
   loadMoreMessages,
   firstItemIndex,
@@ -181,8 +242,8 @@ export default function Chat() {
    const itemsAdded = currentLength - prevMessagesLengthRef.current;
    prevMessagesLengthRef.current = currentLength;
 
-   // Si se añadieron 0 mensajes o un BLOQUE (ej. 50 de historial), ignorar por completo.
-   // Nueva funcionalidad: Solo incrementamos el contador si los mensajes llegan de uno en uno (tiempo real).
+   // Si se añadieron 0 mensajes o un BLOQUE grande (ej. 50 de historial), ignorar por completo.
+   // Relajamos a < 10 para permitir las ráfagas que vienen del flush del TypingIndicator
    if (itemsAdded !== 1) return false;
 
    const lastMessage = messages[currentLength - 1];
@@ -220,14 +281,25 @@ export default function Chat() {
   setUnreadCount(0);
  }, [selectedContact?.id]);
 
- const scrollToBottom = () => {
+ const scrollToBottom = useCallback(() => {
   if (virtuosoRef.current && messages.length > 0) {
    virtuosoRef.current.scrollToIndex({
     index: messages.length - 1,
     behavior: "smooth",
    });
   }
- };
+ }, [messages.length]);
+
+ // Efecto para bajar el scroll cuando se activa el typing
+ useEffect(() => {
+  if (isTyping) {
+   // Un pequeño delay asegura que el componente Footer ya se esté renderizando
+   const timer = setTimeout(() => {
+    scrollToBottom();
+   }, 100);
+   return () => clearTimeout(timer);
+  }
+ }, [isTyping, scrollToBottom]);
 
  const itemContent = useCallback(
   (_index: number, msg: Message) => (
@@ -354,27 +426,34 @@ export default function Chat() {
 
       {/* Contenedor de Mensajes */}
       <div className="flex-1 bg-[#f8fafc] min-h-0 relative">
-       <Virtuoso
-        key={selectedContact?.id}
-        ref={virtuosoRef}
-        data={messages}
-        computeItemKey={computeItemKey}
-        firstItemIndex={firstItemIndex}
-        initialTopMostItemIndex={999999}
-        startReached={handleStartReached}
-        followOutput={handleFollowOutput}
-        atBottomStateChange={(atBottom) => {
-         if (atBottom) {
-          setShowScrollButton(false);
-          setUnreadCount(0);
-         }
-        }}
-        alignToBottom
-        overscan={200}
-        increaseViewportBy={{ top: 200, bottom: 200 }} // ayuda con el parpadeo al hacer scroll
-        style={{ height: "100%" }}
-        itemContent={itemContent}
-       />
+       {isLoading ? (
+        <MessageSkeleton />
+       ) : (
+        <Virtuoso
+         key={selectedContact?.id}
+         ref={virtuosoRef}
+         data={messages}
+         computeItemKey={computeItemKey}
+         firstItemIndex={firstItemIndex}
+         initialTopMostItemIndex={999999}
+         startReached={handleStartReached}
+         followOutput={handleFollowOutput}
+         atBottomStateChange={(atBottom) => {
+          if (atBottom) {
+           setShowScrollButton(false);
+           setUnreadCount(0);
+          }
+         }}
+         alignToBottom
+         overscan={200}
+         increaseViewportBy={{ top: 200, bottom: 200 }} // ayuda con el parpadeo al hacer scroll
+         style={{ height: "100%" }}
+         itemContent={itemContent}
+         components={{
+          Footer: () => (isTyping ? <TypingIndicator /> : null),
+         }}
+        />
+       )}
 
        {/* Botón de mensaje nuevo / scroll abajo */}
        {showScrollButton && (
