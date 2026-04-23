@@ -100,14 +100,16 @@ const WhatsAppLocation = ({
     </MapContainer>
 
     {/* Overlay para capturar clics y evitar que se interactúe con el mapa */}
-    <div className="absolute inset-0 z-[1000] bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+    <div className="absolute inset-0 z-1000 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
      <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-[10px] font-bold text-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm border border-zinc-200">
       Abrir en Google Maps
      </div>
     </div>
    </div>
 
-   <div className={`flex flex-col px-1 gap-1 ${isOut ? "text-right" : "text-left"}`}>
+   <div
+    className={`flex flex-col px-1 gap-1 ${isOut ? "text-right" : "text-left"}`}
+   >
     <span
      className={`text-[10px] font-bold uppercase tracking-wider ${isOut ? "text-blue-200" : "text-zinc-400"}`}
     >

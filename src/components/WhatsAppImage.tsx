@@ -7,12 +7,14 @@ interface WhatsAppImageProps {
   mediaId?: string;
   url?: string;
   alt?: string;
+  onOpenModal?: (data: { type: "image"; src: string; fileName?: string }) => void;
 }
 
 export default function WhatsAppImage({
   mediaId,
   url,
   alt = "WhatsApp Image",
+  onOpenModal,
 }: WhatsAppImageProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
@@ -39,7 +41,15 @@ export default function WhatsAppImage({
 
   const handleOpen = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(imageUrl, "_blank", "noopener,noreferrer");
+    if (onOpenModal && imageUrl) {
+      onOpenModal({
+        type: "image",
+        src: imageUrl,
+        fileName: mediaId ? `imagen_whatsapp_${mediaId}.jpg` : "imagen_lth.jpg",
+      });
+    } else {
+      window.open(imageUrl, "_blank", "noopener,noreferrer");
+    }
   };
 
   return (

@@ -23,6 +23,7 @@ import { renderFormattedText } from "@/utils/formatText";
 import { Message } from "@/types/chat";
 import TypingIndicator from "@/components/TypingIndicator";
 import dynamic from "next/dynamic";
+import MediaModal, { MediaModalData } from "@/components/MediaModal";
 
 const WhatsAppLocation = dynamic(() => import("@/components/WhatsAppLocation"), {
   ssr: false,
@@ -34,7 +35,7 @@ const WhatsAppLocation = dynamic(() => import("@/components/WhatsAppLocation"), 
 });
 
 const MessageItem = React.memo(
- ({ msg, clientName }: { msg: Message; clientName?: string }) => {
+ ({ msg, clientName, onOpenModal }: { msg: Message; clientName?: string; onOpenModal?: (data: MediaModalData) => void }) => {
   const replyTo = msg.rawPayload?.reply_to_text;
   const replyDirection = msg.rawPayload?.reply_to_direction;
   const isOut = msg.direction === "out";
@@ -77,7 +78,7 @@ const MessageItem = React.memo(
 
       {msg.fileId ? (
        <div className="flex flex-col gap-2">
-        <WhatsAppDocument fileId={msg.fileId} direction={msg.direction} />
+        <WhatsAppDocument fileId={msg.fileId} direction={msg.direction} onOpenModal={onOpenModal} />
         {msg.content &&
          msg.content !== "[Archivo: image]" &&
          msg.content !== "[Archivo: document]" && (
@@ -94,6 +95,7 @@ const MessageItem = React.memo(
         <WhatsAppImage
          mediaId={msg.imageId || msg.rawPayload?.imageId}
          url={msg.imageUrl || msg.rawPayload?.imageUrl}
+         onOpenModal={onOpenModal}
         />
         {msg.content &&
          msg.content !== "[Archivo: image]" &&
@@ -167,6 +169,7 @@ export default function Chat() {
  const [selectedContact, setSelectedContact] = useState<Customer | null>(null);
  const [isListCollapsed, setIsListCollapsed] = useState(false);
  const [inputValue, setInputValue] = useState("");
+ const [modalData, setModalData] = useState<MediaModalData | null>(null);
  const fileInputRef = useRef<HTMLInputElement>(null);
 
  // Asegurar que en móvil la lista no esté colapsada
@@ -303,7 +306,7 @@ export default function Chat() {
 
  const itemContent = useCallback(
   (_index: number, msg: Message) => (
-   <MessageItem msg={msg} clientName={selectedContact?.client_name} />
+   <MessageItem msg={msg} clientName={selectedContact?.client_name} onOpenModal={setModalData} />
   ),
   [selectedContact?.client_name],
  );
@@ -538,6 +541,9 @@ export default function Chat() {
      </>
     )}
    </div>
+
+   {/* Modal para Imágenes y Documentos */}
+   <MediaModal data={modalData} onClose={() => setModalData(null)} />
   </div>
  );
 }

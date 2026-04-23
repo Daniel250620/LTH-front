@@ -23,35 +23,28 @@ export default function QuoteDetailPage() {
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
-    if (!selectedQuote?.fileId || downloading) return;
+    if (!id || downloading) return;
 
     setDownloading(true);
     try {
-      const res = await fetch(`/api/whatsapp/image/${selectedQuote.fileId}`);
-      if (!res.ok) throw new Error("Error al obtener el archivo");
-
-      const contentType = res.headers.get("content-type") || "";
-      let extension = "pdf"; // Default to pdf since the button says "Descargar PDF"
-      if (contentType.includes("word")) extension = "docx";
-      else if (contentType.includes("excel") || contentType.includes("spreadsheet"))
-        extension = "xlsx";
-      else if (contentType.includes("jpeg") || contentType.includes("jpg"))
-        extension = "jpg";
-      else if (contentType.includes("png")) extension = "png";
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+      const res = await fetch(`${backendUrl}/quotes/${id}/pdf`);
+      
+      if (!res.ok) throw new Error("Error al generar el PDF");
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Cotizacion-${selectedQuote.id.substring(0, 8)}.${extension}`;
+      a.download = `Cotizacion-${(id as string).substring(0, 8)}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Download error:", err);
-      alert("No se pudo descargar el archivo. Por favor intente de nuevo.");
+      alert("No se pudo descargar el PDF. Por favor intente de nuevo.");
     } finally {
       setDownloading(false);
     }
