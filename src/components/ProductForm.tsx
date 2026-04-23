@@ -12,12 +12,15 @@ import {
  Plus,
  Trash2,
  ChevronDown,
+ Image as ImageIcon,
+ UploadCloud,
+ RefreshCw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useProductStore } from "@/store/useProductStore";
 import { useWarehouseStore } from "@/store/useWarehouseStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCarBattery } from "@fortawesome/free-solid-svg-icons";
+import { useFileStore } from "@/store/useFileStore";
 
 interface ProductFormProps {
  initialData?: Product;
@@ -34,6 +37,31 @@ export default function ProductForm({
 }: ProductFormProps) {
  const router = useRouter();
  const { warehouses, fetchWarehouses } = useWarehouseStore();
+ const { uploadFile, isUploading } = useFileStore();
+
+ const [previewImage, setPreviewImage] = useState<string | null>(() => {
+  return (initialData as any)?.imageUrl || null;
+ });
+
+ const [selectedImageId, setSelectedImageId] = useState<string | null>(() => {
+  return (initialData as any)?.imageId || null;
+ });
+
+ const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+   const result = await uploadFile(file);
+   if (result) {
+    setPreviewImage(result.url);
+    setSelectedImageId(result.id);
+   }
+  }
+ };
+
+ const handleRemoveImage = () => {
+  setPreviewImage(null);
+  setSelectedImageId(null);
+ };
 
  // Colores de la marca LTH basados en tus referencias
  const colors = {
@@ -252,6 +280,7 @@ export default function ProductForm({
     generateSKU(formData.name, formData.categoryId, formData.brandId),
    brandId: formData.brandId || 1,
    categoryId: Number(formData.categoryId),
+   imageId: selectedImageId,
    status: "active",
   };
 
@@ -839,6 +868,82 @@ export default function ProductForm({
          Configurar Inventario
         </button>
        </div>
+      )}
+     </div>
+    </section>
+
+    {/* Imagen del Producto */}
+    <section className="space-y-5">
+     <div className={sectionHeaderStyles}>
+      <ImageIcon size={20} className="text-[#C8102E]" />
+      <h3>Imagen del Producto</h3>
+     </div>
+
+     <div className="relative w-full">
+      {/* Overlay de carga para todo el área de imagen */}
+      {isUploading && (
+       <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300">
+        <RefreshCw className="w-10 h-10 text-[#C8102E] animate-spin mb-3" />
+        <p className="text-sm font-bold text-[#0B1B3D]">Subiendo imagen...</p>
+       </div>
+      )}
+
+      {previewImage ? (
+       <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm group bg-gray-50">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+         src={previewImage}
+         alt="Vista previa del producto"
+         className="w-full h-auto object-contain max-h-[300px] mx-auto"
+        />
+
+        {/* Overlay con acciones */}
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+         <label className="cursor-pointer flex items-center justify-center gap-2 bg-white text-[#0B1B3D] hover:bg-gray-100 px-4 py-2.5 rounded-lg text-sm font-bold shadow-lg transition-all transform hover:scale-105">
+          <RefreshCw size={18} />
+          Cambiar
+          <input
+           type="file"
+           accept="image/*"
+           className="hidden"
+           onChange={handleImageChange}
+           disabled={isUploading}
+          />
+         </label>
+
+         <button
+          type="button"
+          onClick={handleRemoveImage}
+          disabled={isUploading}
+          className="flex items-center justify-center gap-2 bg-[#C8102E] hover:bg-[#A30D25] text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-lg transition-all transform hover:scale-105 disabled:opacity-50"
+         >
+          <Trash2 size={18} />
+          Eliminar
+         </button>
+        </div>
+       </div>
+      ) : (
+       <label
+        className={`flex flex-col items-center justify-center w-full h-56 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-[#0B1B3D]/50 transition-all group ${isUploading ? "pointer-events-none opacity-50" : ""}`}
+       >
+        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+         <div className="bg-white p-4 rounded-full shadow-sm mb-4 group-hover:scale-110 group-hover:shadow-md transition-all">
+          <UploadCloud className="w-8 h-8 text-[#C8102E]" />
+         </div>
+         <p className="mb-2 text-sm text-gray-500">
+          <span className="font-bold text-[#0B1B3D]">Haz clic para subir</span>{" "}
+          o arrastra y suelta
+         </p>
+         <p className="text-xs text-gray-400">PNG, JPG o WEBP (Máx. 5MB)</p>
+        </div>
+        <input
+         type="file"
+         accept="image/*"
+         className="hidden"
+         onChange={handleImageChange}
+         disabled={isUploading}
+        />
+       </label>
       )}
      </div>
     </section>
