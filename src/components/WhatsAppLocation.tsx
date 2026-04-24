@@ -77,9 +77,9 @@ const WhatsAppLocation = ({
  const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
  return (
-  <div className="flex flex-col gap-2 min-w-[220px] max-w-[280px]">
+  <div className="flex flex-col w-[260px] sm:w-[280px] -mt-3 -mx-3 lg:-mt-4 lg:-mx-4 mb-1">
    <div
-    className="relative h-[160px] w-full rounded-xl overflow-hidden border border-zinc-200 cursor-pointer shadow-inner group"
+    className={`relative h-[160px] w-full overflow-hidden cursor-pointer group ${isOut ? "rounded-tl-2xl rounded-tr-none" : "rounded-tr-2xl rounded-tl-none"}`}
     onClick={() => window.open(googleMapsUrl, "_blank")}
    >
     <MapContainer
@@ -108,7 +108,7 @@ const WhatsAppLocation = ({
    </div>
 
    <div
-    className={`flex flex-col px-1 gap-1 ${isOut ? "text-right" : "text-left"}`}
+    className={`flex flex-col px-3 lg:px-4 mt-2 gap-1 ${isOut ? "text-right" : "text-left"}`}
    >
     <span
      className={`text-[10px] font-bold uppercase tracking-wider ${isOut ? "text-blue-200" : "text-zinc-400"}`}
