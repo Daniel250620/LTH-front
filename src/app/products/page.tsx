@@ -10,10 +10,12 @@ import {
  AlertCircle,
  ChevronUp,
  ChevronDown,
+ CarFront,
 } from "lucide-react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
+import CompatibleVehiclesModal, { VehicleCompatibility } from "@/components/CompatibleVehiclesModal";
 import {
  faCarBattery,
  faFilter,
@@ -67,6 +69,10 @@ export default function ProductsPage() {
   name: string;
  } | null>(null);
 
+ const [compatibilityModalOpen, setCompatibilityModalOpen] = useState(false);
+ const [vehicles, setVehicles] = useState<VehicleCompatibility[]>([]);
+ const [loadingVehicles, setLoadingVehicles] = useState(false);
+
  const {
   products,
   loading,
@@ -83,6 +89,7 @@ export default function ProductsPage() {
   setPagination,
   setSort,
   deleteProduct,
+  fetchVehiclesByProduct,
  } = useProductStore();
 
  const [localSearch, setLocalSearch] = useState(search);
@@ -319,6 +326,19 @@ export default function ProductsPage() {
          </td>
          <td className="px-6 py-5 text-center flex items-center justify-center gap-1">
           <button
+           className="p-2 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+           onClick={async () => {
+            setCompatibilityModalOpen(true);
+            setLoadingVehicles(true);
+            const fetchedVehicles = await fetchVehiclesByProduct(parseInt(product.id));
+            setVehicles(fetchedVehicles);
+            setLoadingVehicles(false);
+           }}
+           title="Ver vehículos compatibles"
+          >
+           <CarFront size={16} />
+          </button>
+          <button
            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
            onClick={() => {
             setProductToDelete({ id: product.id, name: product.name });
@@ -390,6 +410,12 @@ export default function ProductsPage() {
      }
     }}
     productName={productToDelete?.name || ""}
+   />
+   <CompatibleVehiclesModal 
+    isOpen={compatibilityModalOpen}
+    onClose={() => setCompatibilityModalOpen(false)}
+    vehicles={vehicles}
+    isLoading={loadingVehicles}
    />
   </div>
  );
