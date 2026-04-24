@@ -12,6 +12,7 @@ import {
  Archive,
  File,
  ArrowLeftRight,
+ CarIcon,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   { href: "/products", label: "Productos", icon: Package },
   { href: "/quotes", label: "Cotizaciones", icon: File },
   { href: "/transfers", label: "Traspasos", icon: ArrowLeftRight },
+  { href: "/vehicles", label: "Vehículos", icon: CarIcon },
  ];
 
  return (
