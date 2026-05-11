@@ -35,7 +35,9 @@ export default function OrderDetailPage() {
 
   const handleDownload = async () => {
     if (!selectedOrder?.quoteId) {
-      alert("Este pedido no cuenta con una cotización vinculada para descargar.");
+      toast.error("No se puede descargar", {
+        description: "Este pedido no cuenta con una cotización vinculada para descargar.",
+      });
       return;
     }
     if (downloading) return;
@@ -53,7 +55,9 @@ export default function OrderDetailPage() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
-      alert("Hubo un error al generar o descargar el PDF de este pedido.");
+      toast.error("Error de descarga", {
+        description: (err as Error).message || "Hubo un error al generar o descargar el PDF de este pedido.",
+      });
     } finally {
       setDownloading(false);
     }

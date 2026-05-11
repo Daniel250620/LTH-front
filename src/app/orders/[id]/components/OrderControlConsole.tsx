@@ -11,6 +11,7 @@ import {
   Info,
   Loader2
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface OrderControlConsoleProps {
   orderId: string;
@@ -54,7 +55,9 @@ export default function OrderControlConsole({
       onSuccess();
     } catch (err) {
       console.error(err);
-      alert("Hubo un error al actualizar el estado de la orden.");
+      toast.error("Error al actualizar estado", {
+        description: (err as Error).message || "Hubo un error al actualizar el estado de la orden.",
+      });
     } finally {
       setUpdatingStatus(false);
     }

@@ -171,7 +171,18 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
 			});
 
 			if (!response.ok) {
-				throw new Error("No se pudo actualizar el estado de la orden");
+				let errorMessage = "No se pudo actualizar el estado de la orden";
+				try {
+					const errorData = await response.json();
+					if (errorData && errorData.message) {
+						errorMessage = Array.isArray(errorData.message)
+							? errorData.message.join(", ")
+							: errorData.message;
+					}
+				} catch {
+					// Fallback si la decodificación falla
+				}
+				throw new Error(errorMessage);
 			}
 
 			const updatedOrder = await response.json();
@@ -190,10 +201,12 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
 				loading: false,
 			});
 		} catch (error) {
+			const errMsg = (error as Error).message || "Error al actualizar la orden";
 			set({
-				error: (error as Error).message || "Error al actualizar la orden",
+				error: errMsg,
 				loading: false,
 			});
+			throw error;
 		}
 	},
 
