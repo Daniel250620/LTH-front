@@ -1,8 +1,10 @@
 "use client";
 
+import React, { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useOrderStore } from "@/store/useOrderStore";
 import {
  X,
  Home,
@@ -13,6 +15,8 @@ import {
  File,
  ArrowLeftRight,
  CarIcon,
+ Van,
+ Truck,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -22,11 +26,19 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
  const pathname = usePathname();
+ const { hasUnreadOrders, setHasUnreadOrders } = useOrderStore();
+
+ useEffect(() => {
+  if (pathname === "/orders" || pathname.startsWith("/orders/")) {
+   setHasUnreadOrders(false);
+  }
+ }, [pathname, setHasUnreadOrders]);
 
  const menuItems = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/products", label: "Productos", icon: Package },
   { href: "/quotes", label: "Cotizaciones", icon: File },
+  { href: "/orders", label: "Pedidos", icon: Truck },
   { href: "/transfers", label: "Traspasos", icon: ArrowLeftRight },
   { href: "/vehicles", label: "Vehículos", icon: CarIcon },
  ];
@@ -86,7 +98,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
          size={20}
          className={isActive ? "text-blue-300" : "text-blue-300/50"}
         />
-        {item.label}
+        <span>{item.label}</span>
+        {item.label === "Pedidos" && hasUnreadOrders && (
+         <span className="relative flex h-2.5 w-2.5 ml-auto shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
+         </span>
+        )}
        </Link>
       );
      })}

@@ -69,6 +69,8 @@ export interface Customer {
   time?: string;
   lastMessage?: Message;
   unreadCount?: number;
+  activeDeliveryOrdersCount?: number;
+  activeDeliveryStatus?: string | null;
 }
 
 export interface ConversationState {
