@@ -13,6 +13,7 @@ import { Customer, Message } from "@/types/chat";
 import { useOrderStore } from "@/store/useOrderStore";
 import { useRouter } from "next/navigation";
 import { X, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 
 interface SocketContextType {
  socket: Socket | null;
@@ -81,9 +82,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
  const [isConnected, setIsConnected] = useState(false);
  const [contacts, setContacts] = useState<Customer[]>([]);
  const [loading, setLoading] = useState(false);
- const [activeContactId, setActiveContactIdState] = useState<number | null>(null);
+ const [activeContactId, setActiveContactIdState] = useState<number | null>(
+  null,
+ );
  const activeContactIdRef = useRef<number | null>(null);
- const [realtimeOrder, setRealtimeOrder] = useState<any | null>(null);
 
  const setActiveContactId = useCallback((id: number | null) => {
   setActiveContactIdState(id);
@@ -216,13 +218,94 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   socketInstance.on("orderCreated", (order: any) => {
    console.log("🛒 [Socket] Nueva orden detectada:", order);
    useOrderStore.getState().addOrder(order);
-   setRealtimeOrder(order);
+
+   toast.custom(
+    (t) => (
+     <div className="relative max-w-md w-[380px] bg-slate-900 text-white rounded-2xl border border-emerald-500/30 shadow-[0_20px_50px_rgba(16,43,94,0.3)] p-4 flex flex-col gap-3 overflow-hidden text-left pointer-events-auto">
+      {/* Decorative pulse glow */}
+      <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+       <div className="flex items-center gap-2">
+        <span className="relative flex h-2 w-2">
+         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
+         Nueva Orden En Tiempo Real
+        </span>
+       </div>
+       <button
+        onClick={() => toast.dismiss(t)}
+        className="text-slate-400 hover:text-white hover:bg-white/10 rounded-lg p-1 transition-all cursor-pointer"
+       >
+        <X size={14} />
+       </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex gap-3">
+       <div className="w-10 h-10 bg-[#102B5E] text-white rounded-xl flex items-center justify-center font-bold border border-white/10 shadow-inner shrink-0 text-xs">
+        LTH
+       </div>
+       <div className="flex-1 min-w-0">
+        <h4 className="font-bold text-sm text-white truncate leading-tight">
+         {typeof order.customerId === "object"
+          ? (order.customerId as any)?.client_name
+          : (order.customer as any)?.client_name || "Pedido Registrado"}
+        </h4>
+        <p className="text-[11px] font-semibold text-slate-400 mt-1 flex items-center gap-1">
+         <span>Folio:</span>
+         <span className="text-slate-200 bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">
+          {order.id.slice(0, 8)}
+         </span>
+        </p>
+       </div>
+      </div>
+
+      {/* Divider */}
+      <div className="h-[1px] bg-white/10 w-full" />
+
+      {/* Footer & Action */}
+      <div className="flex items-center justify-between mt-0.5">
+       <div className="flex flex-col">
+        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+         Total a Cobrar
+        </span>
+        <span className="text-sm font-black text-emerald-400">
+         $
+         {parseFloat(order.totalAmount || 0).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+         })}{" "}
+         MXN
+        </span>
+       </div>
+       <button
+        onClick={() => {
+         router.push(`/orders/${order.id}`);
+         toast.dismiss(t);
+        }}
+        className="flex items-center gap-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer shadow-md shadow-emerald-500/10"
+       >
+        <span>Ver Detalle</span>
+        <ArrowRight size={12} className="shrink-0 font-bold" />
+       </button>
+      </div>
+     </div>
+    ),
+    {
+     duration: 10000,
+    },
+   );
 
    // Incrementar conteo si es una orden de envío
    if (order.deliveryMethod === "delivery") {
-    const customerId = typeof order.customerId === "object"
-     ? (order.customerId as any)?.id
-     : order.customer?.id || order.customerId;
+    const customerId =
+     typeof order.customerId === "object"
+      ? (order.customerId as any)?.id
+      : order.customer?.id || order.customerId;
     const parsedId = Number(customerId);
 
     if (!isNaN(parsedId)) {
@@ -236,9 +319,14 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
          preparing: 2,
          pending: 1,
         };
-        const currentPri = c.activeDeliveryStatus ? (statusPriority[c.activeDeliveryStatus] || 0) : 0;
+        const currentPri = c.activeDeliveryStatus
+         ? statusPriority[c.activeDeliveryStatus] || 0
+         : 0;
         const orderPri = statusPriority[order.status] || 1;
-        const newStatus = orderPri > currentPri ? order.status : c.activeDeliveryStatus || order.status;
+        const newStatus =
+         orderPri > currentPri
+          ? order.status
+          : c.activeDeliveryStatus || order.status;
         return {
          ...c,
          activeDeliveryOrdersCount: newCount,
@@ -268,13 +356,15 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
    // Decrementar si pasa a completado o cancelado y es de envío
    if (order.deliveryMethod === "delivery") {
-    const customerId = typeof order.customerId === "object"
-     ? (order.customerId as any)?.id
-     : order.customer?.id || order.customerId;
+    const customerId =
+     typeof order.customerId === "object"
+      ? (order.customerId as any)?.id
+      : order.customer?.id || order.customerId;
     const parsedId = Number(customerId);
 
     if (!isNaN(parsedId)) {
-     const isTerminal = order.status === "completed" || order.status === "cancelled";
+     const isTerminal =
+      order.status === "completed" || order.status === "cancelled";
      setContacts((prev) =>
       prev.map((c) => {
        if (c.id === parsedId) {
@@ -285,7 +375,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         return {
          ...c,
          activeDeliveryOrdersCount: newCount,
-         activeDeliveryStatus: isTerminal && newCount === 0 ? null : c.activeDeliveryStatus,
+         activeDeliveryStatus:
+          isTerminal && newCount === 0 ? null : c.activeDeliveryStatus,
         };
        }
        return c;
@@ -316,91 +407,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
    }}
   >
    {children}
-
-   {/* Premium Animated Real-time Order Notification Toast */}
-   {realtimeOrder && (
-    <div className="fixed bottom-6 right-6 z-[9999] animate-slide-in-order max-w-md w-[380px] bg-slate-900 text-white rounded-2xl border border-emerald-500/30 shadow-[0_20px_50px_rgba(16,43,94,0.3)] p-4 flex flex-col gap-3 overflow-hidden text-left">
-     {/* Local keyframes style block */}
-     <style>{`
-      @keyframes slideInOrder {
-       0% { transform: translateX(120%) scale(0.9); opacity: 0; }
-       70% { transform: translateX(-10px) scale(1.02); }
-       100% { transform: translateX(0) scale(1); opacity: 1; }
-      }
-      .animate-slide-in-order {
-       animation: slideInOrder 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-      }
-     `}</style>
-
-     {/* Decorative pulse glow */}
-     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
-
-     {/* Header */}
-     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-       <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-       </span>
-       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
-        Nueva Orden En Tiempo Real
-       </span>
-      </div>
-      <button
-       onClick={() => setRealtimeOrder(null)}
-       className="text-slate-400 hover:text-white hover:bg-white/10 rounded-lg p-1 transition-all cursor-pointer"
-      >
-       <X size={14} />
-      </button>
-     </div>
-
-     {/* Content */}
-     <div className="flex gap-3">
-      <div className="w-10 h-10 bg-[#102B5E] text-white rounded-xl flex items-center justify-center font-bold border border-white/10 shadow-inner shrink-0 text-xs">
-       LTH
-      </div>
-      <div className="flex-1 min-w-0">
-       <h4 className="font-bold text-sm text-white truncate leading-tight">
-        {typeof realtimeOrder.customerId === "object"
-         ? (realtimeOrder.customerId as any)?.client_name
-         : (realtimeOrder.customer as any)?.client_name || "Cliente Registrado"}
-       </h4>
-       <p className="text-[11px] font-semibold text-slate-400 mt-1 flex items-center gap-1">
-        <span>Folio:</span>
-        <span className="text-slate-200 bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">
-         {realtimeOrder.id.slice(0, 8)}
-        </span>
-       </p>
-      </div>
-     </div>
-
-     {/* Divider */}
-     <div className="h-[1px] bg-white/10 w-full" />
-
-     {/* Footer & Action */}
-     <div className="flex items-center justify-between mt-0.5">
-      <div className="flex flex-col">
-       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Total a Cobrar</span>
-       <span className="text-sm font-black text-emerald-400">
-        ${parseFloat(realtimeOrder.totalAmount || 0).toLocaleString("es-MX", {
-         minimumFractionDigits: 2,
-         maximumFractionDigits: 2,
-        })} MXN
-       </span>
-      </div>
-      <button
-       onClick={() => {
-        router.push(`/orders/${realtimeOrder.id}`);
-        setRealtimeOrder(null);
-       }}
-       className="flex items-center gap-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer shadow-md shadow-emerald-500/10"
-      >
-       <span>Ver Detalle</span>
-       <ArrowRight size={12} className="shrink-0 font-bold" />
-      </button>
-     </div>
-    </div>
-   )}
   </SocketContext.Provider>
  );
 };

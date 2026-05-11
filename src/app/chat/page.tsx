@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import ContactList from "@/components/ContactList";
 import {
  Bot,
@@ -28,6 +28,7 @@ import { Message } from "@/types/chat";
 import TypingIndicator from "@/components/TypingIndicator";
 import dynamic from "next/dynamic";
 import MediaModal, { MediaModalData } from "@/components/MediaModal";
+import { useSearchParams } from "next/navigation";
 
 const WhatsAppLocation = dynamic(() => import("@/components/WhatsAppLocation"), {
   ssr: false,
@@ -177,12 +178,28 @@ const MessageSkeleton = () => (
 
 MessageItem.displayName = "MessageItem";
 
-export default function Chat() {
+function ChatContent() {
  const [selectedContact, setSelectedContact] = useState<Customer | null>(null);
  const [isListCollapsed, setIsListCollapsed] = useState(false);
  const [inputValue, setInputValue] = useState("");
  const [modalData, setModalData] = useState<MediaModalData | null>(null);
  const fileInputRef = useRef<HTMLInputElement>(null);
+
+ const searchParams = useSearchParams();
+ const customerIdParam = searchParams.get("customerId");
+ const { setActiveContactId, contacts } = useSocket();
+
+ // Escuchar el parámetro customerId de la URL y seleccionar automáticamente al contacto
+ useEffect(() => {
+  if (customerIdParam && contacts.length > 0) {
+   const matchedContact = contacts.find(
+    (c) => String(c.id) === String(customerIdParam)
+   );
+   if (matchedContact && (!selectedContact || String(selectedContact.id) !== String(matchedContact.id))) {
+    setSelectedContact(matchedContact);
+   }
+  }
+ }, [customerIdParam, contacts, selectedContact]);
 
  // Asegurar que en móvil la lista no esté colapsada
  useEffect(() => {
@@ -209,8 +226,6 @@ export default function Chat() {
   loadMoreMessages,
   firstItemIndex,
  } = useChat(selectedContact?.id as number);
-
- const { setActiveContactId } = useSocket();
 
  useEffect(() => {
   setActiveContactId(selectedContact ? Number(selectedContact.id) : null);
@@ -640,5 +655,13 @@ export default function Chat() {
    {/* Modal para Imágenes y Documentos */}
    <MediaModal data={modalData} onClose={() => setModalData(null)} />
   </div>
+ );
+}
+
+export default function Chat() {
+ return (
+  <Suspense fallback={<MessageSkeleton />}>
+   <ChatContent />
+  </Suspense>
  );
 }

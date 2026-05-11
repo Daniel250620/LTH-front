@@ -19,13 +19,13 @@ import OrderItemsTable from "./components/OrderItemsTable";
 import OrderControlConsole from "./components/OrderControlConsole";
 import OrderMapWidget from "./components/OrderMapWidget";
 import OrderPickupSlaWidget from "./components/OrderPickupSlaWidget";
-import SuccessToast from "./components/SuccessToast";
+import { toast } from "sonner";
 
 export default function OrderDetailPage() {
   const { id } = useParams();
   const { fetchOrderById, selectedOrder, loading, error, downloadOrderPdf, updateOrderStatus } = useOrderStore();
   const [downloading, setDownloading] = useState(false);
-  const [successToast, setSuccessToast] = useState(false);
+
 
   useEffect(() => {
     if (id) {
@@ -60,8 +60,9 @@ export default function OrderDetailPage() {
   };
 
   const handleUpdateSuccess = () => {
-    setSuccessToast(true);
-    setTimeout(() => setSuccessToast(false), 4000);
+    toast.success("¡Actualización Exitosa!", {
+      description: "El estado de la orden ha sido modificado y sincronizado en tiempo real.",
+    });
   };
 
   if (loading && !selectedOrder) {
@@ -262,7 +263,6 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      <SuccessToast show={successToast} />
     </>
   );
 }

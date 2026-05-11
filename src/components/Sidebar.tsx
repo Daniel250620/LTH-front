@@ -7,15 +7,10 @@ import { usePathname } from "next/navigation";
 import { useOrderStore } from "@/store/useOrderStore";
 import {
  X,
- Home,
- LayoutDashboard,
  MessageSquare,
  Package,
- Archive,
- File,
  ArrowLeftRight,
  CarIcon,
- Van,
  Truck,
 } from "lucide-react";
 
@@ -37,7 +32,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
  const menuItems = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/products", label: "Productos", icon: Package },
-  { href: "/quotes", label: "Cotizaciones", icon: File },
+  // { href: "/quotes", label: "Cotizaciones", icon: File },
   { href: "/orders", label: "Pedidos", icon: Truck },
   { href: "/transfers", label: "Traspasos", icon: ArrowLeftRight },
   { href: "/vehicles", label: "Vehículos", icon: CarIcon },
@@ -45,35 +40,38 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
  return (
   <>
-   {/* Overlay for mobile */}
+   {/* Overlay for mobile with backdrop blur */}
    {isOpen && (
     <div
-     className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity"
+     className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-all duration-300"
      onClick={onClose}
     />
    )}
 
    <aside
-    className={`fixed inset-y-0 left-0 z-50 w-64 bg-blue-950 border-r border-zinc-100 flex flex-col h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-auto ${
+    className={`fixed inset-y-0 left-0 z-50 w-64 bg-blue-950 border-r border-zinc-100 flex flex-col h-screen transition-all duration-300 ease-in-out transform lg:translate-x-0 lg:static lg:inset-auto ${
      isOpen ? "translate-x-0" : "-translate-x-full"
     } shadow-sm`}
    >
-    <div className="p-6 flex justify-between items-center bg-white">
+    {/* White Brand Header */}
+    <div className="p-6 flex justify-center items-center bg-white border-b border-zinc-100 relative">
      <Image
       src="/lth-logo.jpg"
       alt="LTH Logo"
       width={120}
       height={50}
       className="object-contain"
+      priority
      />
      <button
       onClick={onClose}
-      className="lg:hidden p-2 text-zinc-500 hover:text-zinc-800 transition-colors"
+      className="lg:hidden absolute right-4 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-zinc-800 transition-all duration-200"
      >
       <X size={24} />
      </button>
     </div>
 
+    {/* Navigation Section */}
     <nav className="flex-1 px-4 mt-4 space-y-2">
      {menuItems.map((item) => {
       const isActive =
@@ -85,18 +83,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         key={item.href}
         href={item.href}
         onClick={() => {
-         if (typeof window !== "undefined" && window.innerWidth < 1024)
+         if (typeof window !== "undefined" && window.innerWidth < 1024) {
           onClose();
+         }
         }}
-        className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
+        className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${
          isActive
           ? "bg-blue-300/20 text-white shadow-sm ring-1 ring-blue-300/30"
-          : "text-blue-100/70 hover:bg-blue-300/10 hover:text-white"
+          : "text-blue-100/70 hover:bg-blue-300/10 hover:text-white hover:translate-x-1"
         }`}
        >
         <item.icon
          size={20}
-         className={isActive ? "text-blue-300" : "text-blue-300/50"}
+         className={`transition-all duration-300 ${
+          isActive ? "text-blue-300 scale-105" : "text-blue-300/50"
+         }`}
         />
         <span>{item.label}</span>
         {item.label === "Pedidos" && hasUnreadOrders && (
@@ -110,6 +111,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
      })}
     </nav>
 
+    {/* Classic Footer */}
     <div className="p-6 border-t border-blue-900/50">
      <div className="text-xs text-blue-400 font-medium">© 2026 LTH</div>
     </div>
